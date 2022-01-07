@@ -1,0 +1,32 @@
+{
+    "name": "homebridge-bslamp2",
+    "displayName": "Mi Bedside Lamp 2",
+    "version": "1.0.0",
+    "description": "Homebridge plugin to control Mi Bedside Lamps 2",
+    "author": "Sascha Petrik",
+    "license": "MIT",
+    "main": "index.js",
+    "bin": {
+      "bslamp": "./bslamp.js"
+    },
+    "engines": {
+      "node": ">=12.0.0",
+      "homebridge": ">=0.4.50"
+    },
+    "dependencies": {
+      "hap-controller": "^0.6.1"
+    },
+    "keywords": [
+      "homebridge-plugin",
+      "homebridge",
+      "mi bedside lamp 2"
+    ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/satrik/homebridge-bslamp2"
+    },
+    "bugs": {
+      "url": "https://github.com/satrik/homebridge-bslamp2/issues"
+    }
+  }
+  
