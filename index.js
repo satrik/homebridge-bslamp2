@@ -51,14 +51,14 @@ function MiBedsideLamp2(log, config) {
     this.firmware = packageJson.version;
 
     this.service = new Service.Lightbulb(this.name);
-    
+
     this.savedStates = {
         on: false,
         brightness: 0,
         hue: 0,
         saturation: 0
     };
-    
+
     this.logUpdates = true;
 
     const ipClient = new HttpClient(this.id, this.address, this.port, this.pairingData);
@@ -80,7 +80,6 @@ function MiBedsideLamp2(log, config) {
 
         }
 
-
     });
 
     let connection;
@@ -89,17 +88,17 @@ function MiBedsideLamp2(log, config) {
 
         ipClient.unsubscribeCharacteristics(subscribedList, connection).then(() => {
             connection = undefined;
-        }).catch((e) => console.error(e));
+        }).catch((e) => this.log.error(e));
 
         ipClient.subscribeCharacteristics(subscribeAll).then((conn) => {
             connection = conn;
-        }).catch((e) => console.error(e));
+        }).catch((e) => this.log.error(e));
 
     });
 
     ipClient.subscribeCharacteristics(subscribeAll).then((conn) => {
         connection = conn;
-    }).catch((e) => console.error(e));
+    }).catch((e) => this.log.error(e));
 
 }
 
@@ -112,7 +111,7 @@ MiBedsideLamp2.prototype = {
             const setClient = new HttpClient(this.id, this.address, this.port, this.pairingData)
             setClient.setCharacteristics({ [char]: value })
                 .then(() => { })
-                .catch((e) => this.log(e));
+                .catch((e) => this.log.error(e));
 
         } else {
 
@@ -129,12 +128,12 @@ MiBedsideLamp2.prototype = {
                     }
 
                 })
-                .catch((e) => this.log(e));
+                .catch((e) => this.log.error(e));
 
         }
 
         this.resetTimout();
-    
+
     },
 
     resetTimout: function () {
@@ -142,7 +141,7 @@ MiBedsideLamp2.prototype = {
         setTimeout(() => {
             this.logUpdates = true;
         }, 1000);
-    
+
     },
 
     getOn: function (callback) {
