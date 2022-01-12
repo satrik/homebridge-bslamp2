@@ -1,7 +1,7 @@
 {
     "name": "homebridge-bslamp2",
     "displayName": "Mi Bedside Lamp 2",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Homebridge plugin to control Mi Bedside Lamps 2",
     "author": "Sascha Petrik",
     "license": "MIT",
