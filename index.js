@@ -234,20 +234,20 @@ MiBedsideLamp2.prototype = {
             .setCharacteristic(Characteristic.FirmwareRevision, this.firmware);
 
         this.service.getCharacteristic(Characteristic.On)
-            .on("get", this.getOn.bind(this))
-            .on("set", this.setOn.bind(this));
+            .onGet(this.getOn.bind(this))
+            .onSet(this.setOn.bind(this));
 
         this.service.getCharacteristic(Characteristic.Hue)
-            .on("get", this.getHue.bind(this))
-            .on("set", this.setHue.bind(this));
+            .onGet(this.getHue.bind(this))
+            .onSet(this.setHue.bind(this));
 
         this.service.getCharacteristic(Characteristic.Saturation)
-            .on("get", this.getSaturation.bind(this))
-            .on("set", this.setSaturation.bind(this));
+            .onGet(this.getSaturation.bind(this))
+            .onSet(this.setSaturation.bind(this));
 
         this.service.getCharacteristic(Characteristic.Brightness)
-            .on("get", this.getBrightness.bind(this))
-            .on("set", this.setBrightness.bind(this));
+            .onGet(this.getBrightness.bind(this))
+            .onSet(this.setBrightness.bind(this));
 
         return [this.informationService, this.service];
 
