@@ -17,15 +17,6 @@ const characteristicHue = aid + "." + instanceId.hue;
 const characteristicSaturation = aid + "." + instanceId.saturation;
 const subscribeAll = [characteristicOn, characteristicBrightness, characteristicHue, characteristicSaturation];
 
-let savedStates = {
-    on: false,
-    brightness: 0,
-    hue: 0,
-    saturation: 0
-};
-
-let logUpdates = true;
-
 module.exports = function (homebridge) {
 
     Service = homebridge.hap.Service;
@@ -60,12 +51,21 @@ function MiBedsideLamp2(log, config) {
     this.firmware = packageJson.version;
 
     this.service = new Service.Lightbulb(this.name);
+    
+    this.savedStates = {
+        on: false,
+        brightness: 0,
+        hue: 0,
+        saturation: 0
+    };
+    
+    this.logUpdates = true;
 
     const ipClient = new HttpClient(this.id, this.address, this.port, this.pairingData);
 
     ipClient.on('event', (event) => {
 
-        if (logUpdates) {
+        if (this.logUpdates) {
 
             let allEvents = event;
 
@@ -73,7 +73,7 @@ function MiBedsideLamp2(log, config) {
 
                 let typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid));
                 this.log("recieved update for '" + typeToUpdate + "' => " + ev.value)
-                savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value;
+                this.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value;
                 this.service.getCharacteristic(Characteristic[typeToUpdate]).updateValue(ev.value);
 
             })
@@ -120,9 +120,9 @@ MiBedsideLamp2.prototype = {
             getClient.getCharacteristics([char], {})
                 .then((result) => {
 
-                    if (savedStates[getKeyByValue(instanceId, result.characteristics[0].iid)] != result.characteristics[0].value) {
+                    if (this.savedStates[getKeyByValue(instanceId, result.characteristics[0].iid)] != result.characteristics[0].value) {
 
-                        savedStates[getKeyByValue(instanceId, result.characteristics[0].iid)] = result.characteristics[0].value;
+                        this.savedStates[getKeyByValue(instanceId, result.characteristics[0].iid)] = result.characteristics[0].value;
                         let typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, result.characteristics[0].iid));
                         this.service.getCharacteristic(Characteristic[typeToUpdate]).updateValue(result.characteristics[0].value);
 
@@ -133,24 +133,30 @@ MiBedsideLamp2.prototype = {
 
         }
 
-        setTimeout(() => {
-            logUpdates = true;
-        }, 1000);
+        this.resetTimout();
+    
+    },
 
+    resetTimout: function () {
+
+        setTimeout(() => {
+            this.logUpdates = true;
+        }, 1000);
+    
     },
 
     getOn: function (callback) {
 
-        logUpdates = false;
-        callback(null, savedStates.on);
+        this.logUpdates = false;
+        callback(null, this.savedStates.on);
         this.handleRequest(false, 0, characteristicOn);
 
     },
 
     setOn: function (value, callback) {
 
-        logUpdates = false;
-        savedStates.on = value;
+        this.logUpdates = false;
+        this.savedStates.on = value;
         this.handleRequest(true, value, characteristicOn);
         this.log("set 'On' to => " + value);
         callback();
@@ -159,16 +165,16 @@ MiBedsideLamp2.prototype = {
 
     getBrightness: function (callback) {
 
-        logUpdates = false;
-        callback(null, savedStates.brightness);
+        this.logUpdates = false;
+        callback(null, this.savedStates.brightness);
         this.handleRequest(false, 0, characteristicBrightness);
 
     },
 
     setBrightness: function (value, callback) {
 
-        logUpdates = false;
-        savedStates.brightness = value;
+        this.logUpdates = false;
+        this.savedStates.brightness = value;
         this.handleRequest(true, value, characteristicBrightness);
         this.log("set 'Brightness' to => " + value);
         callback();
@@ -177,16 +183,16 @@ MiBedsideLamp2.prototype = {
 
     getHue: function (callback) {
 
-        logUpdates = false;
-        callback(null, savedStates.hue);
+        this.logUpdates = false;
+        callback(null, this.savedStates.hue);
         this.handleRequest(false, 0, characteristicHue);
 
     },
 
     setHue: function (value, callback) {
 
-        logUpdates = false;
-        savedStates.hue = value;
+        this.logUpdates = false;
+        this.savedStates.hue = value;
         this.handleRequest(true, value, characteristicHue);
         this.log("set 'Hue' to => " + value);
         callback();
@@ -195,16 +201,16 @@ MiBedsideLamp2.prototype = {
 
     getSaturation: function (callback) {
 
-        logUpdates = false;
-        callback(null, savedStates.saturation);
+        this.logUpdates = false;
+        callback(null, this.savedStates.saturation);
         this.handleRequest(false, 0, characteristicSaturation);
 
     },
 
     setSaturation: function (value, callback) {
 
-        logUpdates = false;
-        savedStates.saturation = value;
+        this.logUpdates = false;
+        this.savedStates.saturation = value;
         this.handleRequest(true, value, characteristicSaturation);
         this.log("set 'Saturation' to => " + value);
         callback();
