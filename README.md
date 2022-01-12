@@ -56,3 +56,8 @@ Usage unpair: bslamp unpair [filename]
  - [filename] is 'bslamp-' and the IP address of the device with '-' instead of '.'
  - e.g.  'bslamp unpair bslamp-192-168-0-123'
 ```
+
+## Changelog
+## 1.0.1
+- changed scope of the saved states to work with muliple lamps
+- switched to promise-based _Characteristic.onSet / .onGet_ methods
