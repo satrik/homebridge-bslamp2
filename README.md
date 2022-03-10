@@ -17,9 +17,10 @@ sudo npm install -g homebridge-bslamp2
 
 ## Configuration
 With the plugin comes a CLI tool which can be executed with `bslamp` (see usage at next section).
+`sudo` is (mostly) needed as usually the user doesn't have write rights in the modules directory. 
 After the pairing it generates a copy-pastable homebridge accessory conig. e.g.:
 ```
-pi@raspberrypi:~ $ bslamp pair 192.168.0.123 098-76-543
+pi@raspberrypi:~ $ sudo bslamp pair 192.168.0.123 098-76-543
 Search Device........
 Found MiBedsideLamp2-7A5C
 Start pairing
