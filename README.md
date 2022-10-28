@@ -59,6 +59,10 @@ Usage unpair: bslamp unpair [filename]
 ```
 
 ## Changelog
+## 1.0.2
+- updated to newest hap-controller package
+- complete rewritten all hap client functions to improve stability
+
 ## 1.0.1
 - changed scope of the saved states to work with muliple lamps
 - switched to promise-based _Characteristic.onSet / .onGet_ methods
