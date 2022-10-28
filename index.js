@@ -17,6 +17,7 @@ const characteristicHue = aid + "." + instanceId.hue
 const characteristicSaturation = aid + "." + instanceId.saturation
 const subscribeAll = [characteristicOn, characteristicBrightness, characteristicHue, characteristicSaturation]
 
+
 module.exports = function (homebridge) {
 
     Service = homebridge.hap.Service
@@ -26,13 +27,74 @@ module.exports = function (homebridge) {
 
 }
 
+
 function getKeyByValue(object, value) {
+
     return Object.keys(object).find(key => object[key] === value)
+
 }
 
+
 function capitalizeFirstLetter(string) {
+
     return string.charAt(0).toUpperCase() + string.slice(1)
+
 }
+
+
+async function handleSubscription(that) {
+
+    if(that.subClient.listeners('event').length == 0) {
+
+        try {
+
+            await that.subClient.subscribeCharacteristics(subscribeAll)
+
+        } catch (e) {
+
+            that.log.error(e)
+
+        }
+
+    }
+
+    that.subClient.on('event', async (event) => {
+
+        if (that.logUpdates) {
+
+            that.allEvents = event
+
+            that.allEvents.characteristics.forEach(ev => {
+
+                that.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid))
+                that.log("recieved update for '" + that.typeToUpdate + "' => " + ev.value)
+                that.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value
+                that.service.getCharacteristic(Characteristic[that.typeToUpdate]).updateValue(ev.value)
+
+            })
+
+        }
+
+        that.logUpdates = true
+
+    })
+
+    that.subClient.on('event-disconnect', async (formerSubscribes) => {
+        
+        try {
+
+            await that.subClient.unsubscribeCharacteristics(subscribeAll)
+            
+        } catch (e) {
+
+            that.log.error(e)
+
+        }
+
+    })
+
+}
+
 
 function MiBedsideLamp2(log, config) {
 
@@ -60,86 +122,92 @@ function MiBedsideLamp2(log, config) {
     }
 
     this.logUpdates = true
+    this.resetTimer = null
 
-    const ipClient = new HttpClient(this.id, this.address, this.port, this.pairingData)
-
-    ipClient.on('event', (event) => {
-
-        if (this.logUpdates) {
-
-            let allEvents = event
-
-            allEvents.characteristics.forEach(ev => {
-
-                let typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid))
-                this.log("recieved update for '" + typeToUpdate + "' => " + ev.value)
-                this.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value
-                this.service.getCharacteristic(Characteristic[typeToUpdate]).updateValue(ev.value)
-
-            })
-
+    this.subClient = new HttpClient(
+        this.id,
+        this.address,
+        this.port,
+        this.pairingData,
+        {
+            usePersistentConnections: true,
+            subscriptionsUseSameConnection: false
         }
-
-    })
-
-    let connection
-
-    ipClient.on('event-disconnect', (subscribedList) => {
-
-        ipClient.unsubscribeCharacteristics(subscribedList, connection).then(() => {
-            connection = undefined
-        }).catch((e) => this.log.error(e))
-
-        ipClient.subscribeCharacteristics(subscribeAll).then((conn) => {
-            connection = conn
-        }).catch((e) => this.log.error(e))
-
-    })
-
-    ipClient.subscribeCharacteristics(subscribeAll).then((conn) => {
-        connection = conn
-    }).catch((e) => this.log.error(e))
+    )
+    
+    handleSubscription(this)
 
 }
 
+
 MiBedsideLamp2.prototype = {
 
-    handleRequest: function (set, value, char) {
+    handleRequest: async function (set, value, char) {
 
-        if (set) {
+        if(this.subClient.listeners('event').length == 0) {
 
-            const setClient = new HttpClient(this.id, this.address, this.port, this.pairingData)
-            setClient.setCharacteristics({ [char]: value })
-                .then(() => { })
-                .catch((e) => this.log.error(e))
-
-        } else {
-
-            const getClient = new HttpClient(this.id, this.address, this.port, this.pairingData)
-            getClient.getCharacteristics([char], {})
-                .then((result) => {
-
-                    if (this.savedStates[getKeyByValue(instanceId, result.characteristics[0].iid)] != result.characteristics[0].value) {
-
-                        this.savedStates[getKeyByValue(instanceId, result.characteristics[0].iid)] = result.characteristics[0].value
-                        let typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, result.characteristics[0].iid))
-                        this.service.getCharacteristic(Characteristic[typeToUpdate]).updateValue(result.characteristics[0].value)
-
-                    }
-
-                })
-                .catch((e) => this.log.error(e))
+            handleSubscription(this)
 
         }
 
-        this.resetTimout()
+        this.client = this.client || new HttpClient(
+            this.id,
+            this.address,
+            this.port,
+            this.pairingData,
+            {
+                usePersistentConnections: true,
+                subscriptionsUseSameConnection: false
+            }
+        )
+
+        if (set) {
+
+            try {
+
+                await this.client.setCharacteristics({[char] : value})
+
+            } catch(e) {
+
+                this.log.error(e)
+
+            }
+
+        } else {
+
+            try {
+
+                this.result = await this.client.getCharacteristics([char])
+                this.savedStates[getKeyByValue(instanceId, this.result.characteristics[0].iid)] = this.result.characteristics[0].value
+                this.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, this.result.characteristics[0].iid))
+                this.service.getCharacteristic(Characteristic[this.typeToUpdate]).updateValue(this.result.characteristics[0].value)
+
+            } catch(e) {
+
+                this.log.error(e)
+
+            }
+
+        }
+
+        this.resetLogTimeout()
 
     },
 
-    resetTimout: function () {
+    resetLogTimeout: function () {
 
-        setTimeout(() => {
+        if(this.resetTimer != null) {
+
+            clearTimeout(this.resetTimer)
+            this.resetTimer = null
+
+        }
+
+        this.resetTimer = setTimeout(() => {
+
             this.logUpdates = true
+            this.resetTimer = null
+
         }, 1000)
 
     },
@@ -155,9 +223,11 @@ MiBedsideLamp2.prototype = {
     setOn: function (value) {
 
         this.logUpdates = false
+        if(this.savedStates.on != value) {
+            this.log("set 'On' to => " + value)
+        }
         this.savedStates.on = value
         this.handleRequest(true, value, characteristicOn)
-        this.log("set 'On' to => " + value)
 
     },
 
@@ -172,9 +242,11 @@ MiBedsideLamp2.prototype = {
     setBrightness: function (value) {
 
         this.logUpdates = false
+        if(this.savedStates.brightness != value) {
+            this.log("set 'Brightness' to => " + value)
+        }
         this.savedStates.brightness = value
         this.handleRequest(true, value, characteristicBrightness)
-        this.log("set 'Brightness' to => " + value)
 
     },
 
@@ -189,9 +261,11 @@ MiBedsideLamp2.prototype = {
     setHue: function (value) {
 
         this.logUpdates = false
+        if(this.savedStates.hue != value) {
+            this.log("set 'Hue' to => " + value)
+        }
         this.savedStates.hue = value
         this.handleRequest(true, value, characteristicHue)
-        this.log("set 'Hue' to => " + value)
 
     },
 
@@ -206,9 +280,12 @@ MiBedsideLamp2.prototype = {
     setSaturation: function (value) {
 
         this.logUpdates = false
+        if(this.savedStates.saturation != value) {
+            this.log("set 'Saturation' to => " + value)
+        }
+
         this.savedStates.saturation = value
         this.handleRequest(true, value, characteristicSaturation)
-        this.log("set 'Saturation' to => " + value)
 
     },
 
