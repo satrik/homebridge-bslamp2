@@ -59,6 +59,9 @@ Usage unpair: bslamp unpair [filename]
 ```
 
 ## Changelog
+## 1.0.3
+- fix wrong dependency in package.json
+
 ## 1.0.2
 - updated to newest hap-controller package
 - complete rewritten all hap client functions to improve stability
