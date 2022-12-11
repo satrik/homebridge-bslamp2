@@ -11,6 +11,10 @@ const instanceId = {
     hue: 15,
     saturation: 16
 }
+const clientType = {
+    sub: 1,
+    getSet: 2
+}
 const characteristicOn = aid + "." + instanceId.on
 const characteristicBrightness = aid + "." + instanceId.brightness
 const characteristicHue = aid + "." + instanceId.hue
@@ -44,54 +48,133 @@ function capitalizeFirstLetter(string) {
 
 async function handleSubscription(that) {
 
-    if(that.subClient.listeners('event').length == 0) {
+    if (typeof that.subClient === "undefined" || that.subClient === null) {
 
-        try {
-
-            await that.subClient.subscribeCharacteristics(subscribeAll)
-
-        } catch (e) {
-
-            that.log.error(e)
-
-        }
+        createNewClient(that, clientType.sub)
 
     }
 
-    that.subClient.on('event', async (event) => {
+    if(!("_defaultConnection" in that.subClient)) {
 
-        if (that.logUpdates) {
+        if("deviceId" in that.subClient) {
 
-            that.allEvents = event
-
-            that.allEvents.characteristics.forEach(ev => {
-
-                that.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid))
-                that.log("recieved update for '" + that.typeToUpdate + "' => " + ev.value)
-                that.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value
-                that.service.getCharacteristic(Characteristic[that.typeToUpdate]).updateValue(ev.value)
-
-            })
+            closeClient(that, clientType.sub)
 
         }
 
-        that.logUpdates = true
+        createNewClient(that, clientType.sub)
 
-    })
+    }
 
-    that.subClient.on('event-disconnect', async (formerSubscribes) => {
-        
-        try {
+    if(that.subClient.listeners('event').length == 0) {
 
-            await that.subClient.unsubscribeCharacteristics(subscribeAll)
-            
-        } catch (e) {
+        if(that.subCounter < 3) {
 
-            that.log.error(e)
+            try {
+
+                await that.subClient.subscribeCharacteristics(subscribeAll)
+                that.subCounter = 0
+
+            } catch (e) {
+
+                that.log.error(e)
+                that.subCounter++
+
+            }
+
+        } else {
+
+            that.log("Unable to subscribe")
 
         }
 
-    })
+        that.subClient.on('event', async (event) => {
+
+            if (that.logUpdates) {
+
+                that.allEvents = event
+
+                that.allEvents.characteristics.forEach(ev => {
+
+                    that.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid))
+                    that.log("recieved update for '" + that.typeToUpdate + "' => " + ev.value)
+                    that.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value
+                    that.service.getCharacteristic(Characteristic[that.typeToUpdate]).updateValue(ev.value)
+
+                })
+
+            }
+
+        })
+
+        that.subClient.on('event-disconnect', async (formerSubscribes) => {
+
+            try {
+
+                await that.subClient.unsubscribeCharacteristics(subscribeAll)
+                that.subClient.removeAllListeners('event')
+                closeClient(that, clientType.sub)
+                handleSubscription(that)
+
+            } catch (e) {
+
+                that.log.error(e)
+
+            }
+
+        })
+
+    }
+
+}
+
+
+function closeClient(that, type) {
+
+    if(type == clientType.getSet) {
+
+        that.getSetClient.close()
+        that.getSetClient = null
+
+    } else if (type == clientType.sub) {
+
+        that.subClient.close()
+        that.subClient = null
+
+    }
+
+}
+
+
+function createNewClient(that, type) {
+
+    if(type == clientType.getSet && (typeof that.getSetClient === "undefined" || that.getSetClient === null)) {
+
+        that.getSetClient = new HttpClient(
+            that.id,
+            that.address,
+            that.port,
+            that.pairingData,
+            {
+                usePersistentConnections: true,
+                subscriptionsUseSameConnection: false
+            }
+        )
+  
+    } else if (type == clientType.sub && (typeof that.subClient === "undefined" || that.subClient === null)) {
+
+        that.subClient = new HttpClient(
+            that.id,
+            that.address,
+            that.port,
+            that.pairingData,
+            {
+                usePersistentConnections: true,
+                subscriptionsUseSameConnection: false
+            }
+        )
+
+    }
 
 }
 
@@ -121,20 +204,17 @@ function MiBedsideLamp2(log, config) {
         saturation: 0
     }
 
+    this.subCounter = 0
+    this.getCounter = 0
+    this.setCounter = 0
+
     this.logUpdates = true
     this.resetTimer = null
+    this.closeTimer = null
 
-    this.subClient = new HttpClient(
-        this.id,
-        this.address,
-        this.port,
-        this.pairingData,
-        {
-            usePersistentConnections: true,
-            subscriptionsUseSameConnection: false
-        }
-    )
-    
+    this.getSetClient = null
+    this.subClient = null 
+
     handleSubscription(this)
 
 }
@@ -144,53 +224,105 @@ MiBedsideLamp2.prototype = {
 
     handleRequest: async function (set, value, char) {
 
+        if (typeof this.subClient === "undefined" || this.subClient === null) {
+
+            createNewClient(this, clientType.sub)
+
+        }
+
         if(this.subClient.listeners('event').length == 0) {
 
             handleSubscription(this)
 
         }
 
-        this.client = this.client || new HttpClient(
-            this.id,
-            this.address,
-            this.port,
-            this.pairingData,
-            {
-                usePersistentConnections: true,
-                subscriptionsUseSameConnection: false
-            }
-        )
+        if (typeof this.getSetClient === "undefined" || this.getSetClient === null) {
+
+            createNewClient(this, clientType.getSet)
+
+        } else if(!("_defaultConnection" in this.getSetClient)) {
+
+            closeClient(this, clientType.getSet)
+            createNewClient(this, clientType.getSet)
+
+        }
 
         if (set) {
 
-            try {
+            if(this.setCounter < 1) {
 
-                await this.client.setCharacteristics({[char] : value})
+                try {
 
-            } catch(e) {
+                    await this.getSetClient.setCharacteristics({[char] : value})
+                    this.setCounter = 0
 
-                this.log.error(e)
+                } catch(e) {
+
+                    this.log.error(e)
+                    this.setCounter++
+
+                }
+
+            } else {
+
+                this.log("Unable to set value")
 
             }
 
+
         } else {
 
-            try {
+            if(this.getCounter < 1) {
 
-                this.result = await this.client.getCharacteristics([char])
-                this.savedStates[getKeyByValue(instanceId, this.result.characteristics[0].iid)] = this.result.characteristics[0].value
-                this.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, this.result.characteristics[0].iid))
-                this.service.getCharacteristic(Characteristic[this.typeToUpdate]).updateValue(this.result.characteristics[0].value)
+                try {
 
-            } catch(e) {
+                    this.result = await this.getSetClient.getCharacteristics([char])
+                    this.savedStates[getKeyByValue(instanceId, this.result.characteristics[0].iid)] = this.result.characteristics[0].value
+                    this.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, this.result.characteristics[0].iid))
+                    this.service.getCharacteristic(Characteristic[this.typeToUpdate]).updateValue(this.result.characteristics[0].value)
+                    this.getCounter = 0
 
-                this.log.error(e)
+                } catch(e) {
+
+                    this.log.error(e)
+                    this.getCounter++
+
+                }
+
+            } else {
+
+                this.log("Unable to get current state")
 
             }
 
         }
 
+        this.closeConnection()
         this.resetLogTimeout()
+
+    },
+
+    closeConnection: function () {
+
+        if(this.closeTimer != null) {
+
+            clearTimeout(this.closeTimer)
+            this.closeTimer = null
+
+        }
+
+        this.closeTimer = setTimeout(() => {
+
+            if(this.getSetClient != null) {
+
+                this.getSetClient.close()
+                this.getSetClient = null
+
+            }
+
+            this.closeTimer = null
+
+        }, 3000)
 
     },
 
@@ -208,7 +340,20 @@ MiBedsideLamp2.prototype = {
             this.logUpdates = true
             this.resetTimer = null
 
-        }, 1000)
+        }, 3000)
+
+    },
+
+    checkOn: function(value) {
+
+        if(value > 0 && !this.savedStates.on) {
+
+            this.logUpdates = false
+            this.savedStates.on = true
+            this.log("set 'On' to => " + this.savedStates.on)
+            this.service.getCharacteristic(Characteristic.On).updateValue(true)
+
+        }
 
     },
 
@@ -223,11 +368,14 @@ MiBedsideLamp2.prototype = {
     setOn: function (value) {
 
         this.logUpdates = false
+
         if(this.savedStates.on != value) {
+
             this.log("set 'On' to => " + value)
+            this.savedStates.on = value
+            this.handleRequest(true, value, characteristicOn)
+
         }
-        this.savedStates.on = value
-        this.handleRequest(true, value, characteristicOn)
 
     },
 
@@ -242,11 +390,15 @@ MiBedsideLamp2.prototype = {
     setBrightness: function (value) {
 
         this.logUpdates = false
+
         if(this.savedStates.brightness != value) {
+
+            this.checkOn(value)
             this.log("set 'Brightness' to => " + value)
+            this.savedStates.brightness = value
+            this.handleRequest(true, value, characteristicBrightness)
+
         }
-        this.savedStates.brightness = value
-        this.handleRequest(true, value, characteristicBrightness)
 
     },
 
@@ -261,11 +413,15 @@ MiBedsideLamp2.prototype = {
     setHue: function (value) {
 
         this.logUpdates = false
+
         if(this.savedStates.hue != value) {
+
+            this.checkOn(value)
             this.log("set 'Hue' to => " + value)
+            this.savedStates.hue = value
+            this.handleRequest(true, value, characteristicHue)
+
         }
-        this.savedStates.hue = value
-        this.handleRequest(true, value, characteristicHue)
 
     },
 
@@ -280,12 +436,15 @@ MiBedsideLamp2.prototype = {
     setSaturation: function (value) {
 
         this.logUpdates = false
-        if(this.savedStates.saturation != value) {
-            this.log("set 'Saturation' to => " + value)
-        }
 
-        this.savedStates.saturation = value
-        this.handleRequest(true, value, characteristicSaturation)
+        if(this.savedStates.saturation != value) {
+
+            this.checkOn(value)
+            this.log("set 'Saturation' to => " + value)
+            this.savedStates.saturation = value
+            this.handleRequest(true, value, characteristicSaturation)
+
+        }
 
     },
 
