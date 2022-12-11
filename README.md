@@ -2,7 +2,7 @@
 Homebridge plugin to control Mi Bedside Lamps 2
 
 <a href="https://www.npmjs.com/package/homebridge-bslamp2"><img title="npm version" src="https://badgen.net/npm/v/homebridge-bslamp2?icon=npm&label"></a>
-<a href="https://github.com/satrik/homebridge-bslamp2"><img title="npm downloads total" src="https://badgen.net/badge/color/Repo/green?icon=github&label"></a>
+<a href="https://github.com/satrik/homebridge-bslamp2"><img title="github repo" src="https://badgen.net/badge/color/Repo/green?icon=github&label"></a>
 
 ## Install
 
