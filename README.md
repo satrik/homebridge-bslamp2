@@ -1,10 +1,8 @@
 # homebridge-bslamp2
 Homebridge plugin to control Mi Bedside Lamps 2
 
-## Why?
-The Mi Bedside Lamps 2 are HomeKit compatible, but I had a lot of connection problems with it. I found out that the bslamps2 are randomly not visible under the Bonjour/mDNS service `_hap._tcp.`. That's why HomeKit can't reach/find the devices. As the bslamps2 are using an ESP32 inside, I think they just calling `MDNS.begin` more than once without `MDNS.end()` in between. This would lead exaclty this behavior, but this is nothing what I can change or fix. 
-So I've written this homebrige plugin to control the bslamps2 which uses the [hap-controller](https://github.com/Apollon77/hap-controller-node).
-
+<a href="https://www.npmjs.com/package/homebridge-bslamp2"><img title="npm version" src="https://badgen.net/npm/v/homebridge-bslamp2?icon=npm&label"></a>
+<a href="https://github.com/satrik/homebridge-bslamp2"><img title="npm downloads total" src="https://badgen.net/badge/color/Repo/green?icon=github&label"></a>
 
 ## Install
 
