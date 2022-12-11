@@ -57,6 +57,12 @@ Usage unpair: bslamp unpair [filename]
 ```
 
 ## Changelog
+## 1.0.4
+- close hap-controller client connection after 3 seconds without user input
+- create a new client if the current one has problems or no one is available
+- improve subscription stability
+- better state handling
+
 ## 1.0.3
 - fix wrong dependency in package.json
 
