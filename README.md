@@ -57,6 +57,9 @@ Usage unpair: bslamp unpair [filename]
 ```
 
 ## Changelog
+## 1.0.6
+- fixed bad error handling
+
 ## 1.0.5
 - update dependencies 
 
