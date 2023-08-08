@@ -97,7 +97,7 @@ async function handleSubscription(that) {
                 that.allEvents.characteristics.forEach(ev => {
 
                     that.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid))
-                    that.log("recieved update for '" + that.typeToUpdate + "' => " + ev.value)
+                    that.log("received update for '" + that.typeToUpdate + "' => " + ev.value)
                     that.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value
                     that.service.getCharacteristic(Characteristic[that.typeToUpdate]).updateValue(ev.value)
 
