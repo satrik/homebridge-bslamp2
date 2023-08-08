@@ -68,56 +68,54 @@ async function handleSubscription(that) {
 
     if(that.subClient.listeners('event').length == 0) {
 
-            try {
+        try {
 
-                await that.subClient.subscribeCharacteristics(subscribeAll)
+            await that.subClient.subscribeCharacteristics(subscribeAll)
 
-            } catch (e) {
+        } catch (e) {
 
-                that.log.error("Unable to subscribe")
-                that.log.error(e)
+            that.log.error("Unable to subscribe")
+            that.log.error(e)
 
-            }
+        }
 
-        } 
+    } 
 
-        that.subClient.on('event', async (event) => {
+    that.subClient.on('event', async (event) => {
 
-            if (that.logUpdates) {
+        if (that.logUpdates) {
 
-                that.allEvents = event
+            that.allEvents = event
 
-                that.allEvents.characteristics.forEach(ev => {
+            that.allEvents.characteristics.forEach(ev => {
 
-                    that.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid))
-                    that.log("received update for '" + that.typeToUpdate + "' => " + ev.value)
-                    that.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value
-                    that.service.getCharacteristic(Characteristic[that.typeToUpdate]).updateValue(ev.value)
+                that.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, ev.iid))
+                that.log("received update for '" + that.typeToUpdate + "' => " + ev.value)
+                that.savedStates[getKeyByValue(instanceId, ev.iid)] = ev.value
+                that.service.getCharacteristic(Characteristic[that.typeToUpdate]).updateValue(ev.value)
 
-                })
+            })
 
-            }
+        }
 
-        })
+    })
 
-        that.subClient.on('event-disconnect', async (formerSubscribes) => {
+    that.subClient.on('event-disconnect', async (formerSubscribes) => {
 
-            try {
+        try {
 
-                await that.subClient.unsubscribeCharacteristics(subscribeAll)
-                that.subClient.removeAllListeners('event')
-                closeClient(that, clientType.sub)
-                handleSubscription(that)
+            await that.subClient.unsubscribeCharacteristics(subscribeAll)
+            that.subClient.removeAllListeners('event')
+            closeClient(that, clientType.sub)
+            handleSubscription(that)
 
-            } catch (e) {
+        } catch (e) {
 
-                that.log.error(e)
+            that.log.error(e)
 
-            }
+        }
 
-        })
-
-    }
+    })
 
 }
 
