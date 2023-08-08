@@ -68,25 +68,18 @@ async function handleSubscription(that) {
 
     if(that.subClient.listeners('event').length == 0) {
 
-        if(that.subCounter < 3) {
-
             try {
 
                 await that.subClient.subscribeCharacteristics(subscribeAll)
-                that.subCounter = 0
 
             } catch (e) {
 
+                that.log.error("Unable to subscribe")
                 that.log.error(e)
-                that.subCounter++
 
             }
 
-        } else {
-
-            that.log("Unable to subscribe")
-
-        }
+        } 
 
         that.subClient.on('event', async (event) => {
 
@@ -204,10 +197,6 @@ function MiBedsideLamp2(log, config) {
         saturation: 0
     }
 
-    this.subCounter = 0
-    this.getCounter = 0
-    this.setCounter = 0
-
     this.logUpdates = true
     this.resetTimer = null
     this.closeTimer = null
@@ -249,30 +238,18 @@ MiBedsideLamp2.prototype = {
 
         if (set) {
 
-            if(this.setCounter < 1) {
-
                 try {
 
                     await this.getSetClient.setCharacteristics({[char] : value})
-                    this.setCounter = 0
 
                 } catch(e) {
 
+                    this.log.error("Unable to set value")
                     this.log.error(e)
-                    this.setCounter++
 
                 }
 
-            } else {
-
-                this.log("Unable to set value")
-
-            }
-
-
         } else {
-
-            if(this.getCounter < 1) {
 
                 try {
 
@@ -280,20 +257,13 @@ MiBedsideLamp2.prototype = {
                     this.savedStates[getKeyByValue(instanceId, this.result.characteristics[0].iid)] = this.result.characteristics[0].value
                     this.typeToUpdate = capitalizeFirstLetter(getKeyByValue(instanceId, this.result.characteristics[0].iid))
                     this.service.getCharacteristic(Characteristic[this.typeToUpdate]).updateValue(this.result.characteristics[0].value)
-                    this.getCounter = 0
 
                 } catch(e) {
 
+                    this.log.error("Unable to get current state")
                     this.log.error(e)
-                    this.getCounter++
 
                 }
-
-            } else {
-
-                this.log("Unable to get current state")
-
-            }
 
         }
 
