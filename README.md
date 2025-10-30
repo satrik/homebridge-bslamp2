@@ -1,3 +1,12 @@
+# :warning: Discontinued
+
+I decided to discontinue the development of this plugin as I don't use it anymore. I don't archive it for now, as the plugin still works but it is to be expected that at some point it will no longer work
+
+---
+
+---
+
+
 # homebridge-bslamp2
 Homebridge plugin to control Mi Bedside Lamps 2
 
